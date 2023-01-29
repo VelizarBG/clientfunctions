@@ -119,7 +119,7 @@ unifiedPublishing {
 			changelog.set changelogg
 		}
 
-		mainPublication tasks.jar
+		mainPublication tasks.remapJar
 
 		System.getenv("curse_api_key")?.with { String key ->
 			curseforge {
