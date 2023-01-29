@@ -97,7 +97,7 @@ unifiedPublishing {
 	project {
 		displayName.set "v$project.version"
 		releaseType.set "release"
-		gameVersions.set(["1.19", "1.19.1", "1.19.2"])
+		gameVersions.set(["1.19.3"])
 		gameLoaders.set(["fabric"])
 
 		relations {

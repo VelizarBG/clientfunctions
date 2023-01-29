@@ -17,6 +17,7 @@ import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.tooltip.Tooltip;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.render.BufferBuilder;
 import net.minecraft.client.render.GameRenderer;
@@ -48,7 +49,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.IntConsumer;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
@@ -114,24 +114,10 @@ public class ClientFunctionScreen extends Screen {
 	@Override
 	protected void init() {
 		invalidateBoxContent();
-		if (client != null)
-			client.keyboard.setRepeatEvents(true);
 
 		Consumer<ButtonWidget> unfocusButton = button -> {
 			((ClickableWidgetInvoker) button).invokeSetFocused(false);
 			super.setFocused(null);
-		};
-
-		Function<Text, ButtonWidget.TooltipSupplier> tooltipSupplierFactory = tooltip -> new ButtonWidget.TooltipSupplier() {
-			@Override
-			public void onTooltip(ButtonWidget buttonWidget, MatrixStack matrixStack, int i, int j) {
-				ClientFunctionScreen.this.renderTooltip(matrixStack, tooltip, i, j);
-			}
-
-			@Override
-			public void supply(Consumer<Text> consumer) {
-				consumer.accept(tooltip);
-			}
 		};
 
 		IntConsumer scrollHistory = offset -> {
@@ -166,8 +152,8 @@ public class ClientFunctionScreen extends Screen {
 		};
 
 		runButton = addDrawableChild(
-			new ButtonWidget(
-				relWidth.getAsInt() + BOX_WIDTH - 100, relHeight.getAsInt() + BOX_HEIGHT, 98, 20, Text.literal("Run"),
+			new ButtonWidget.Builder(
+				Text.literal("Run"),
 				button -> {
 					PacketByteBuf buf = PacketByteBufs.create();
 					for (String line : textBoxString.split("\n")) {
@@ -182,52 +168,62 @@ public class ClientFunctionScreen extends Screen {
 					textBoxString = "";
 					client.setScreen(null);
 				}
-			)
+			).position(relWidth.getAsInt() + BOX_WIDTH - 100, relHeight.getAsInt() + BOX_HEIGHT)
+				.size(98, 20)
+				.build()
 		);
 		clearTextButton = addDrawableChild(
-			new ButtonWidget(
-				relWidth.getAsInt() + 2, relHeight.getAsInt() + BOX_HEIGHT, 20, 20, Text.literal("X"),
+			new ButtonWidget.Builder(
+				Text.literal("X"),
 				button -> {
 					textBoxSelectionManager.selectAll();
 					textBoxSelectionManager.delete(1);
 					invalidateBoxContent();
 
 					unfocusButton.accept(button);
-				},
-				tooltipSupplierFactory.apply(Text.translatable("clientfunctions.gui.clearTextBox"))
-			)
+				}
+			).position(relWidth.getAsInt() + 2, relHeight.getAsInt() + BOX_HEIGHT)
+				.size(20, 20)
+				.tooltip(Tooltip.of(Text.translatable("clientfunctions.gui.clearTextBox")))
+				.build()
 		);
 		prevButton = addDrawableChild(
-			new ButtonWidget(
-				relWidth.getAsInt() + BOX_WIDTH - 3 * 20 - 2 * 10 - 2, relHeight.getAsInt() - 20, 20, 20, Text.literal("<"),
+			new ButtonWidget.Builder(
+				Text.literal("<"),
 				button -> {
 					scrollHistory.accept(-1);
 
 					unfocusButton.accept(button);
 				}
-			)
+			).position(relWidth.getAsInt() + BOX_WIDTH - 3 * 20 - 2 * 10 - 2, relHeight.getAsInt() - 20)
+				.size(20, 20)
+				.build()
 		);
 		nextButton = addDrawableChild(
-			new ButtonWidget(
-				prevButton.x + 20 + 10, prevButton.y, 20, 20, Text.literal(">"),
+			new ButtonWidget.Builder(
+				Text.literal(">"),
 				button -> {
 					scrollHistory.accept(1);
 
 					unfocusButton.accept(button);
 				}
-			)
+			).position(prevButton.getX() + 20 + 10, prevButton.getY())
+				.size(20, 20)
+				.build()
 		);
 		clearHistoryButton = addDrawableChild(
-			new ButtonWidget(
-				nextButton.x + 20 + 10, nextButton.y, 20, 20, Text.literal("X"),
+			new ButtonWidget.Builder(
+				Text.literal("X"),
 				button -> {
 					textBoxHistory = new LinkedHashSet<>();
 					historyIndex = 0;
 
 					unfocusButton.accept(button);
-				},
-				tooltipSupplierFactory.apply(Text.translatable("clientfunctions.gui.clearHistory"))
-			)
+				}
+			).position(nextButton.getX() + 20 + 10, nextButton.getY())
+				.size(20, 20)
+				.tooltip(Tooltip.of(Text.translatable("clientfunctions.gui.clearHistory")))
+				.build()
 		);
 	}
 
@@ -237,12 +233,6 @@ public class ClientFunctionScreen extends Screen {
 			super.setFocused(focused);
 		else
 			super.setFocused(null);
-	}
-
-	@Override
-	public void removed() {
-		if (client != null)
-			client.keyboard.setRepeatEvents(false);
 	}
 
 	@Override
@@ -396,7 +386,7 @@ public class ClientFunctionScreen extends Screen {
 	@Override
 	public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
 		renderBackground(matrices);
-		RenderSystem.setShader(GameRenderer::getPositionTexShader);
+		RenderSystem.setShader(GameRenderer::getPositionTexProgram);
 		RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
 		RenderSystem.setShaderTexture(0, CFGUI_TEXTURE);
 		drawTexture(matrices, relWidth.getAsInt(), relHeight.getAsInt(), this.getZOffset(), 0.0F, 0.0F, BOX_WIDTH, BOX_HEIGHT, BOX_WIDTH, BOX_HEIGHT);
@@ -435,7 +425,7 @@ public class ClientFunctionScreen extends Screen {
 		RenderSystem.setShaderTexture(0, DrawableHelper.OPTIONS_BACKGROUND_TEXTURE);
 		RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
 		RenderSystem.disableTexture();
-		RenderSystem.setShader(GameRenderer::getPositionColorShader);
+		RenderSystem.setShader(GameRenderer::getPositionColorProgram);
 
 		int left = relWidth.getAsInt();
 		int top = relHeight.getAsInt() + BOX_X_OFFSET;
@@ -471,7 +461,7 @@ public class ClientFunctionScreen extends Screen {
 	private void drawSelection(Rect2i[] selectionRectangles) {
 		Tessellator tessellator = Tessellator.getInstance();
 		BufferBuilder bufferBuilder = tessellator.getBuffer();
-		RenderSystem.setShader(GameRenderer::getPositionShader);
+		RenderSystem.setShader(GameRenderer::getPositionProgram);
 		RenderSystem.setShaderColor(0.0F, 0.0F, 255.0F, 255.0F);
 		RenderSystem.disableTexture();
 		RenderSystem.enableColorLogicOp();
