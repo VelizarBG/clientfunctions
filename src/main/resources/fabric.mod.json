@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "clientfunctions",
+  "version": "${version}",
+
+  "name": "Client Functions",
+  "description": "Execute your own functions on the fly without data packs",
+  "authors": [
+    "VelizarBG"
+  ],
+  "contact": {
+    "sources": "https://github.com/VelizarBG/clientfunctions",
+    "issues": "https://github.com/VelizarBG/clientfunctions/issues"
+  },
+
+  "license": "MIT",
+  "icon": "assets/clientfunctions/icon.png",
+
+  "entrypoints": {
+    "main": [
+      "velizarbg.clientfunctions.ClientFunctionsMod"
+    ],
+    "client": [
+      "velizarbg.clientfunctions.ClientFunctionsClient"
+    ],
+    "modmenu": [
+      "velizarbg.clientfunctions.gui.ModMenuIntegration"
+    ]
+  },
+
+  "mixins": [
+    "clientfunctions.mixins.json"
+  ],
+
+  "depends": {
+    "fabricloader": ">=0.12.12",
+    "minecraft": ">=1.19 <1.19.3",
+    "java": ">=17"
+  }
+}

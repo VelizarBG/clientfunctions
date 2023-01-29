@@ -1,0 +1,11 @@
+{
+    "key.categories.clientfunctions": "Client Functions",
+    "key.clientfunctions.gui": "Open GUI",
+    "clientfunctions.gui.clearTextBox": "Clear the text box",
+    "clientfunctions.gui.clearHistory": "Clear the function history",
+    "text.autoconfig.clientfunctions.title": "Client Functions",
+    "text.autoconfig.clientfunctions.option.historyMode": "History Mode",
+    "clientfunctions.history.never": "Never",
+    "clientfunctions.history.rejoin": "Rejoin",
+    "clientfunctions.history.restart": "Restart"
+}
