@@ -6,7 +6,7 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.function.CommandFunction;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
+import net.minecraft.text.LiteralText;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Pair;
@@ -25,7 +25,7 @@ public class ClientFunctionsMod implements ModInitializer {
 	public void onInitialize() {
 		ServerPlayNetworking.registerGlobalReceiver(ClientFunctionsMod.PACKET_CLIENT_FUNCTION_LINES, (server, player, handler, buf, response) -> {
 			if (!player.hasPermissionLevel(2)) {
-				player.sendMessage(Text.literal("You do not have sufficient permissions to perform this action").formatted(Formatting.RED));
+				player.sendMessage(new LiteralText("You do not have sufficient permissions to perform this action").formatted(Formatting.RED), false);
 				return;
 			}
 
@@ -35,15 +35,15 @@ public class ClientFunctionsMod implements ModInitializer {
 					list.add(buf.readString());
 				}
 			} catch (Throwable t) {
-				player.sendMessage(Text.literal("Something went wrong while reading the packet: " + t.getMessage()).formatted(Formatting.RED));
+				player.sendMessage(new LiteralText("Something went wrong while reading the packet: " + t.getMessage()).formatted(Formatting.RED), false);
 			}
 			try {
 				CLIENT_FUNCTIONS_QUEUE.add(
 					new Pair<>(
 						player,
 						CommandFunction.create(
-							Identifier.of(
-								player.getEntityName(),
+							new Identifier(
+								player.getEntityName().toLowerCase(),
 								String.valueOf(RANDOM.nextInt())
 							),
 							server.getCommandManager().getDispatcher(),
@@ -53,7 +53,7 @@ public class ClientFunctionsMod implements ModInitializer {
 					)
 				);
 			} catch (RuntimeException ex) {
-				player.sendMessage(Text.literal(ex.getMessage()).formatted(Formatting.RED));
+				player.sendMessage(new LiteralText(ex.getMessage()).formatted(Formatting.RED), false);
 			}
 		});
 		ServerTickEvents.END_SERVER_TICK.register(server -> {

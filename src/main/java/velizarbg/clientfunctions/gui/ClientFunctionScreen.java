@@ -28,9 +28,10 @@ import net.minecraft.client.util.SelectionManager;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.client.util.math.Rect2i;
 import net.minecraft.network.PacketByteBuf;
-import net.minecraft.screen.ScreenTexts;
+import net.minecraft.text.LiteralText;
 import net.minecraft.text.Style;
 import net.minecraft.text.Text;
+import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.MathHelper;
@@ -42,6 +43,7 @@ import org.lwjgl.glfw.GLFW;
 import velizarbg.clientfunctions.ClientFunctionsMod;
 import velizarbg.clientfunctions.ModConfig.HistoryMode;
 import velizarbg.clientfunctions.mixins.ClickableWidgetInvoker;
+import velizarbg.clientfunctions.mixins.SelectionManagerInvoker;
 
 import java.util.Arrays;
 import java.util.LinkedHashSet;
@@ -93,7 +95,7 @@ public class ClientFunctionScreen extends Screen {
 	public static int historyIndex = 0;
 
 	public ClientFunctionScreen() {
-		super(ScreenTexts.EMPTY);
+		super(LiteralText.EMPTY);
 	}
 
 	private void setClipboard(String clipboard) {
@@ -167,7 +169,7 @@ public class ClientFunctionScreen extends Screen {
 
 		runButton = addDrawableChild(
 			new ButtonWidget(
-				relWidth.getAsInt() + BOX_WIDTH - 100, relHeight.getAsInt() + BOX_HEIGHT, 98, 20, Text.literal("Run"),
+				relWidth.getAsInt() + BOX_WIDTH - 100, relHeight.getAsInt() + BOX_HEIGHT, 98, 20, new LiteralText("Run"),
 				button -> {
 					PacketByteBuf buf = PacketByteBufs.create();
 					for (String line : textBoxString.split("\n")) {
@@ -186,7 +188,7 @@ public class ClientFunctionScreen extends Screen {
 		);
 		clearTextButton = addDrawableChild(
 			new ButtonWidget(
-				relWidth.getAsInt() + 2, relHeight.getAsInt() + BOX_HEIGHT, 20, 20, Text.literal("X"),
+				relWidth.getAsInt() + 2, relHeight.getAsInt() + BOX_HEIGHT, 20, 20, new LiteralText("X"),
 				button -> {
 					textBoxSelectionManager.selectAll();
 					textBoxSelectionManager.delete(1);
@@ -194,12 +196,12 @@ public class ClientFunctionScreen extends Screen {
 
 					unfocusButton.accept(button);
 				},
-				tooltipSupplierFactory.apply(Text.translatable("clientfunctions.gui.clearTextBox"))
+				tooltipSupplierFactory.apply(new TranslatableText("clientfunctions.gui.clearTextBox"))
 			)
 		);
 		prevButton = addDrawableChild(
 			new ButtonWidget(
-				relWidth.getAsInt() + BOX_WIDTH - 3 * 20 - 2 * 10 - 2, relHeight.getAsInt() - 20, 20, 20, Text.literal("<"),
+				relWidth.getAsInt() + BOX_WIDTH - 3 * 20 - 2 * 10 - 2, relHeight.getAsInt() - 20, 20, 20, new LiteralText("<"),
 				button -> {
 					scrollHistory.accept(-1);
 
@@ -209,7 +211,7 @@ public class ClientFunctionScreen extends Screen {
 		);
 		nextButton = addDrawableChild(
 			new ButtonWidget(
-				prevButton.x + 20 + 10, prevButton.y, 20, 20, Text.literal(">"),
+				prevButton.x + 20 + 10, prevButton.y, 20, 20, new LiteralText(">"),
 				button -> {
 					scrollHistory.accept(1);
 
@@ -219,14 +221,14 @@ public class ClientFunctionScreen extends Screen {
 		);
 		clearHistoryButton = addDrawableChild(
 			new ButtonWidget(
-				nextButton.x + 20 + 10, nextButton.y, 20, 20, Text.literal("X"),
+				nextButton.x + 20 + 10, nextButton.y, 20, 20, new LiteralText("X"),
 				button -> {
 					textBoxHistory = new LinkedHashSet<>();
 					historyIndex = 0;
 
 					unfocusButton.accept(button);
 				},
-				tooltipSupplierFactory.apply(Text.translatable("clientfunctions.gui.clearHistory"))
+				tooltipSupplierFactory.apply(new TranslatableText("clientfunctions.gui.clearHistory"))
 			)
 		);
 	}
@@ -291,23 +293,22 @@ public class ClientFunctionScreen extends Screen {
 			textBoxSelectionManager.cut();
 			return true;
 		} else {
-			SelectionManager.SelectionType selectionType = hasControlDown() ? SelectionManager.SelectionType.WORD : SelectionManager.SelectionType.CHARACTER;
 			switch(keyCode) {
 				case GLFW.GLFW_KEY_ENTER:
 				case GLFW.GLFW_KEY_KP_ENTER:
 					textBoxSelectionManager.insert("\n");
 					return true;
 				case GLFW.GLFW_KEY_BACKSPACE:
-					textBoxSelectionManager.delete(-1, selectionType);
+					textBoxSelectionManager.delete(-1);
 					return true;
 				case GLFW.GLFW_KEY_DELETE:
-					textBoxSelectionManager.delete(1, selectionType);
+					textBoxSelectionManager.delete(1);
 					return true;
 				case GLFW.GLFW_KEY_RIGHT:
-					textBoxSelectionManager.moveCursor(1, hasShiftDown(), selectionType);
+					textBoxSelectionManager.moveCursor(1, hasShiftDown());
 					return true;
 				case GLFW.GLFW_KEY_LEFT:
-					textBoxSelectionManager.moveCursor(-1, hasShiftDown(), selectionType);
+					textBoxSelectionManager.moveCursor(-1, hasShiftDown());
 					return true;
 				case GLFW.GLFW_KEY_DOWN:
 					moveDownLine();
@@ -365,7 +366,7 @@ public class ClientFunctionScreen extends Screen {
 
 	private void moveToLineStart() {
 		if (hasControlDown()) {
-			textBoxSelectionManager.moveCursorToStart(hasShiftDown());
+			((SelectionManagerInvoker) textBoxSelectionManager).invokeMoveCursorToStart(hasShiftDown());
 		} else {
 			int i = textBoxSelectionManager.getSelectionStart();
 			int j = getBoxContent().getLineStart(i);
@@ -375,7 +376,7 @@ public class ClientFunctionScreen extends Screen {
 
 	private void moveToLineEnd() {
 		if (hasControlDown()) {
-			textBoxSelectionManager.moveCursorToEnd(hasShiftDown());
+			((SelectionManagerInvoker) textBoxSelectionManager).invokeMoveCursorToEnd(hasShiftDown());
 		} else {
 			int i = textBoxSelectionManager.getSelectionStart();
 			int j = getBoxContent().getLineEnd(i);
@@ -804,7 +805,7 @@ public class ClientFunctionScreen extends Screen {
 			this.content = content;
 			this.x = x;
 			this.y = y;
-			text = Text.literal(content).setStyle(style);
+			text = new LiteralText(content).setStyle(style);
 		}
 	}
 
