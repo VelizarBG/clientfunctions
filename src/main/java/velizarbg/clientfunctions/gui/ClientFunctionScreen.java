@@ -58,16 +58,15 @@ import static velizarbg.clientfunctions.Constants.CONFIG;
 @Environment(EnvType.CLIENT)
 public class ClientFunctionScreen extends Screen {
 	public static final Identifier CFGUI_TEXTURE = new Identifier("clientfunctions", "textures/gui/cfgui.png");
-	private static final int BOX_WIDTH = 566;
-	private static final int BOX_HEIGHT = 318;
-	private static final int BOX_X_OFFSET = 20;
-	private static final int BOX_Y_OFFSET = 40;
+	private static final int BOX_WIDTH = 336;
+	private static final int BOX_HEIGHT = 189;
+	private static final int BOX_OFFSET = BOX_HEIGHT / 21;
 	private static final int LINE_HEIGHT = 9;
-	private static final int MAX_VISIBLE_LINES = 31;
+	private static final int MAX_VISIBLE_LINES = (BOX_HEIGHT - BOX_OFFSET * 2) / LINE_HEIGHT;
 	private final IntSupplier relWidth = () -> (width - BOX_WIDTH) / 2;
 	private final IntSupplier relHeight = () -> (height - BOX_HEIGHT) / 2;
-	private final Supplier<Rect2i> textBoxRect = () -> new Rect2i(relWidth.getAsInt() + BOX_X_OFFSET, relHeight.getAsInt() + BOX_X_OFFSET, BOX_WIDTH - BOX_Y_OFFSET, BOX_HEIGHT - BOX_Y_OFFSET);
-	private final Supplier<Rect2i> scrollBarRect = () -> new Rect2i(relWidth.getAsInt() + BOX_WIDTH, relHeight.getAsInt() + BOX_X_OFFSET, 10, BOX_HEIGHT - BOX_Y_OFFSET);
+	private final Supplier<Rect2i> textBoxRect = () -> new Rect2i(relWidth.getAsInt() + BOX_OFFSET, relHeight.getAsInt() + BOX_OFFSET, BOX_WIDTH - BOX_OFFSET * 2, BOX_HEIGHT - BOX_OFFSET * 2);
+	private final Supplier<Rect2i> scrollBarRect = () -> new Rect2i(relWidth.getAsInt() + BOX_WIDTH + 1, relHeight.getAsInt() + BOX_OFFSET, 10, BOX_HEIGHT - BOX_OFFSET * 2);
 	private int tickCounter;
 	private final SelectionManager textBoxSelectionManager = new SelectionManager(
 		ClientFunctionScreen::getTextBoxString,
@@ -167,7 +166,7 @@ public class ClientFunctionScreen extends Screen {
 
 		runButton = addDrawableChild(
 			new ButtonWidget(
-				relWidth.getAsInt() + BOX_WIDTH - 100, relHeight.getAsInt() + BOX_HEIGHT, 98, 20, Text.literal("Run"),
+				relWidth.getAsInt() + BOX_WIDTH - 75 + 1, relHeight.getAsInt() + BOX_HEIGHT + 1, 75, 20, Text.literal("Run"),
 				button -> {
 					PacketByteBuf buf = PacketByteBufs.create();
 					for (String line : textBoxString.split("\n")) {
@@ -186,7 +185,7 @@ public class ClientFunctionScreen extends Screen {
 		);
 		clearTextButton = addDrawableChild(
 			new ButtonWidget(
-				relWidth.getAsInt() + 2, relHeight.getAsInt() + BOX_HEIGHT, 20, 20, Text.literal("X"),
+				relWidth.getAsInt(), relHeight.getAsInt() + BOX_HEIGHT + 1, 20, 20, Text.literal("X"),
 				button -> {
 					textBoxSelectionManager.selectAll();
 					textBoxSelectionManager.delete(1);
@@ -199,7 +198,7 @@ public class ClientFunctionScreen extends Screen {
 		);
 		prevButton = addDrawableChild(
 			new ButtonWidget(
-				relWidth.getAsInt() + BOX_WIDTH - 3 * 20 - 2 * 10 - 2, relHeight.getAsInt() - 20, 20, 20, Text.literal("<"),
+				relWidth.getAsInt() + BOX_WIDTH - 3 * 20 - 2 * 10, relHeight.getAsInt() - 20 - 1, 20, 20, Text.literal("<"),
 				button -> {
 					scrollHistory.accept(-1);
 
@@ -437,17 +436,17 @@ public class ClientFunctionScreen extends Screen {
 		RenderSystem.disableTexture();
 		RenderSystem.setShader(GameRenderer::getPositionColorShader);
 
-		int left = relWidth.getAsInt();
-		int top = relHeight.getAsInt() + BOX_X_OFFSET;
-		int bottom = top + BOX_HEIGHT - BOX_Y_OFFSET;
+		Rect2i scrollBar = scrollBarRect.get();
+		int barXStart = scrollBar.getX();
+		int barXEnd = barXStart + scrollBar.getWidth();
+		int top = scrollBar.getY();
+		int bottom = top + scrollBar.getHeight();
 		int lines = getBoxContent().lines.length;
 
 		int filledBarHeight = (int) ((float) IntMath.pow(bottom - top, 2) / (lines * LINE_HEIGHT));
 		filledBarHeight = MathHelper.clamp(filledBarHeight, 16, bottom - top);
 		int filledBarYPos = (int) (scrolledLines * (bottom - top - filledBarHeight) / (lines - MAX_VISIBLE_LINES) + top);
 		if (filledBarYPos < top) filledBarYPos = top;
-		int barXStart = left + BOX_WIDTH;
-		int barXEnd = barXStart + scrollBarRect.get().getWidth();
 
 		Tessellator tessellator = Tessellator.getInstance();
 		BufferBuilder bufferBuilder = tessellator.getBuffer();
@@ -497,11 +496,11 @@ public class ClientFunctionScreen extends Screen {
 	}
 
 	private Position screenPositionToAbsolutePosition(Position position) {
-		return new Position(position.x - relWidth.getAsInt() - BOX_X_OFFSET, position.y - relHeight.getAsInt() - BOX_X_OFFSET);
+		return new Position(position.x - relWidth.getAsInt() - BOX_OFFSET, position.y - relHeight.getAsInt() - BOX_OFFSET);
 	}
 
 	private Position absolutePositionToScreenPosition(Position position) {
-		return new Position(position.x + relWidth.getAsInt() + BOX_X_OFFSET, position.y + relHeight.getAsInt() + BOX_X_OFFSET);
+		return new Position(position.x + relWidth.getAsInt() + BOX_OFFSET, position.y + relHeight.getAsInt() + BOX_OFFSET);
 	}
 
 	private void updateScrollingState(double mouseX, double mouseY, int button) {
@@ -566,16 +565,12 @@ public class ClientFunctionScreen extends Screen {
 		if (!super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY)) {
 			if (button == 0) {
 				if (scrolling) {
+					int barHeight = scrollBarRect.get().getHeight();
 					int lines = getBoxContent().lines.length;
-
-					int top = relHeight.getAsInt() + BOX_X_OFFSET;
-					int bottom = top + BOX_HEIGHT - BOX_Y_OFFSET;
-
-					double i = Math.max(1, lines - MAX_VISIBLE_LINES);
-					int j = bottom - top;
-					int k = MathHelper.clamp((int) ((float) (j * j) / (float) (lines * LINE_HEIGHT)), 16, j);
-					double l = Math.max(0.1, i / (double) (j - k));
-					scroll(deltaY * l);
+					double remainingLines = Math.max(1, lines - MAX_VISIBLE_LINES);
+					int barToLineRatio = MathHelper.clamp((int) ((float) (barHeight * barHeight) / (float) (lines * LINE_HEIGHT)), 16, barHeight);
+					double deltaMultiplier = Math.max(0.1, remainingLines / (double) (barHeight - barToLineRatio));
+					scroll(deltaY * deltaMultiplier);
 					return true;
 				}
 				textBoxSelectionManager.moveCursorTo(
@@ -589,7 +584,8 @@ public class ClientFunctionScreen extends Screen {
 	}
 
 	private boolean isOutsideTextBox(Position pos) {
-		return !(textBoxRect.get()).contains(pos.x, pos.y);
+		// '+ 1' because the objects overlap by a single pixel ¯\_(ツ)_/¯
+		return !(textBoxRect.get()).contains(pos.x, pos.y + 1);
 	}
 
 	private void scroll(double amount) {
@@ -627,7 +623,7 @@ public class ClientFunctionScreen extends Screen {
 			MutableBoolean mutableBoolean = new MutableBoolean();
 			TextHandler textHandler = textRenderer.getTextHandler();
 			String tempBoxString = textBoxString.endsWith("\n") ? textBoxString + " " : textBoxString;
-			textHandler.wrapLines(tempBoxString, 524, Style.EMPTY, true, (style, start, end) -> {
+			textHandler.wrapLines(tempBoxString, textBoxRect.get().getWidth(), Style.EMPTY, true, (style, start, end) -> {
 				String substring = tempBoxString.substring(start, end);
 				mutableBoolean.setValue(substring.endsWith("\n"));
 				String finalString = StringUtils.stripEnd(substring, " \n");
