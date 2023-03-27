@@ -388,7 +388,7 @@ public class ClientFunctionScreen extends Screen {
 		RenderSystem.setShader(GameRenderer::getPositionTexProgram);
 		RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
 		RenderSystem.setShaderTexture(0, CFGUI_TEXTURE);
-		drawTexture(matrices, relWidth.getAsInt(), relHeight.getAsInt(), this.getZOffset(), 0.0F, 0.0F, BOX_WIDTH, BOX_HEIGHT, BOX_WIDTH, BOX_HEIGHT);
+		drawTexture(matrices, relWidth.getAsInt(), relHeight.getAsInt(), 0, 0.0F, 0.0F, BOX_WIDTH, BOX_HEIGHT, BOX_WIDTH, BOX_HEIGHT);
 		BoxContent boxContent = getBoxContent();
 		for (int i = 0; i < MAX_VISIBLE_LINES; i++) {
 			if (i + scrolledLines < boxContent.lines.length) {
@@ -423,7 +423,6 @@ public class ClientFunctionScreen extends Screen {
 	private void drawScrollBar() {
 		RenderSystem.setShaderTexture(0, DrawableHelper.OPTIONS_BACKGROUND_TEXTURE);
 		RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-		RenderSystem.disableTexture();
 		RenderSystem.setShader(GameRenderer::getPositionColorProgram);
 
 		Rect2i scrollBar = scrollBarRect.get();
@@ -462,7 +461,6 @@ public class ClientFunctionScreen extends Screen {
 		BufferBuilder bufferBuilder = tessellator.getBuffer();
 		RenderSystem.setShader(GameRenderer::getPositionProgram);
 		RenderSystem.setShaderColor(0.0F, 0.0F, 255.0F, 255.0F);
-		RenderSystem.disableTexture();
 		RenderSystem.enableColorLogicOp();
 		RenderSystem.logicOp(GlStateManager.LogicOp.OR_REVERSE);
 		bufferBuilder.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION);
@@ -482,7 +480,6 @@ public class ClientFunctionScreen extends Screen {
 
 		tessellator.draw();
 		RenderSystem.disableColorLogicOp();
-		RenderSystem.enableTexture();
 	}
 
 	private Position screenPositionToAbsolutePosition(Position position) {
