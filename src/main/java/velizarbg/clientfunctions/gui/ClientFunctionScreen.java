@@ -42,7 +42,6 @@ import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 import velizarbg.clientfunctions.ClientFunctionsMod;
 import velizarbg.clientfunctions.ModConfig.HistoryMode;
-import velizarbg.clientfunctions.mixins.ClickableWidgetInvoker;
 
 import java.util.Arrays;
 import java.util.LinkedHashSet;
@@ -115,7 +114,7 @@ public class ClientFunctionScreen extends Screen {
 		invalidateBoxContent();
 
 		Consumer<ButtonWidget> unfocusButton = button -> {
-			((ClickableWidgetInvoker) button).invokeSetFocused(false);
+			button.setFocused(false);
 			super.setFocused(null);
 		};
 
