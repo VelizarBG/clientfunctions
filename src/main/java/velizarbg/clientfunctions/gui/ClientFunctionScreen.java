@@ -14,7 +14,7 @@ import net.minecraft.SharedConstants;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextHandler;
 import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.DrawableHelper;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.tooltip.Tooltip;
@@ -26,7 +26,6 @@ import net.minecraft.client.render.VertexFormat;
 import net.minecraft.client.render.VertexFormats;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.client.util.SelectionManager;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.client.util.math.Rect2i;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.screen.ScreenTexts;
@@ -235,20 +234,15 @@ public class ClientFunctionScreen extends Screen {
 
 	@Override
 	public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-		if (super.keyPressed(keyCode, scanCode, modifiers)) {
+		if (keyPressedInternal(keyCode)) {
+			invalidateBoxContent();
+			if (updateCursor)
+				tryMoveCursorIntoView();
+			else
+				updateCursor = true;
 			return true;
-		} else {
-			boolean success = keyPressedInternal(keyCode);
-			if (success) {
-				invalidateBoxContent();
-				if (updateCursor) {
-					tryMoveCursorIntoView();
-				} else updateCursor = true;
-				return true;
-			} else {
-				return false;
-			}
-		}
+		} else
+			return super.keyPressed(keyCode, scanCode, modifiers);
 	}
 
 	@Override
@@ -382,45 +376,42 @@ public class ClientFunctionScreen extends Screen {
 	}
 
 	@Override
-	public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-		renderBackground(matrices);
-		RenderSystem.setShader(GameRenderer::getPositionTexProgram);
-		RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-		RenderSystem.setShaderTexture(0, CFGUI_TEXTURE);
-		drawTexture(matrices, relWidth.getAsInt(), relHeight.getAsInt(), 0, 0.0F, 0.0F, BOX_WIDTH, BOX_HEIGHT, BOX_WIDTH, BOX_HEIGHT);
+	public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+		renderBackground(context);
+		context.drawTexture(CFGUI_TEXTURE, relWidth.getAsInt(), relHeight.getAsInt(), 0, 0.0F, 0.0F, BOX_WIDTH, BOX_HEIGHT, BOX_WIDTH, BOX_HEIGHT);
 		BoxContent boxContent = getBoxContent();
 		for (int i = 0; i < MAX_VISIBLE_LINES; i++) {
 			if (i + scrolledLines < boxContent.lines.length) {
 				Line line = boxContent.lines[i + (int) scrolledLines];
-				textRenderer.draw(matrices, line.text, (float) line.x, (float) line.y, 237666);
+				context.drawText(textRenderer, line.text, line.x, line.y, 237666, false);
 			} else break;
 		}
 
 		if (boxContent.lines.length > MAX_VISIBLE_LINES)
 			drawScrollBar();
-		drawCursor(matrices, boxContent.pos, boxContent.atEnd);
+		drawCursor(context, boxContent.pos, boxContent.atEnd);
 		drawSelection(boxContent.selectionRectangles);
 
-		super.render(matrices, mouseX, mouseY, delta);
+		super.render(context, mouseX, mouseY, delta);
 	}
 
-	private void drawCursor(MatrixStack matrices, Position pos, boolean atEnd) {
+	private void drawCursor(DrawContext context, Position pos, boolean atEnd) {
 		if (tickCounter / 6 % 2 == 0) {
 			pos = absolutePositionToScreenPosition(pos);
 			if (isOutsideTextBox(pos))
 				return;
 
 			if (!atEnd) {
-				DrawableHelper.fill(matrices, pos.x, pos.y - 1, pos.x + 1, pos.y + LINE_HEIGHT, 0xFFFFFFFF);
+				context.fill(pos.x, pos.y - 1, pos.x + 1, pos.y + LINE_HEIGHT, 0xFFFFFFFF);
 			} else {
-				textRenderer.draw(matrices, "_", (float)pos.x, (float)pos.y, 0xFFFFFFFF);
+				context.drawText(textRenderer, "_", pos.x, pos.y, 0xFFFFFFFF, false);
 			}
 		}
 
 	}
 
 	private void drawScrollBar() {
-		RenderSystem.setShaderTexture(0, DrawableHelper.OPTIONS_BACKGROUND_TEXTURE);
+		RenderSystem.setShaderTexture(0, Screen.OPTIONS_BACKGROUND_TEXTURE);
 		RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
 		RenderSystem.setShader(GameRenderer::getPositionColorProgram);
 
