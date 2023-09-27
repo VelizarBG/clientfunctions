@@ -21,6 +21,7 @@ import net.minecraft.client.gui.tooltip.Tooltip;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.render.BufferBuilder;
 import net.minecraft.client.render.GameRenderer;
+import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.Tessellator;
 import net.minecraft.client.render.VertexFormat;
 import net.minecraft.client.render.VertexFormats;
@@ -377,8 +378,8 @@ public class ClientFunctionScreen extends Screen {
 
 	@Override
 	public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-		renderBackground(context);
-		context.drawTexture(CFGUI_TEXTURE, relWidth.getAsInt(), relHeight.getAsInt(), 0, 0.0F, 0.0F, BOX_WIDTH, BOX_HEIGHT, BOX_WIDTH, BOX_HEIGHT);
+		super.render(context, mouseX, mouseY, delta);
+
 		BoxContent boxContent = getBoxContent();
 		for (int i = 0; i < MAX_VISIBLE_LINES; i++) {
 			if (i + scrolledLines < boxContent.lines.length) {
@@ -390,9 +391,13 @@ public class ClientFunctionScreen extends Screen {
 		if (boxContent.lines.length > MAX_VISIBLE_LINES)
 			drawScrollBar();
 		drawCursor(context, boxContent.pos, boxContent.atEnd);
-		drawSelection(boxContent.selectionRectangles);
+		drawSelection(context, boxContent.selectionRectangles);
+	}
 
-		super.render(context, mouseX, mouseY, delta);
+	@Override
+	public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
+		super.renderBackground(context, mouseX, mouseY, delta);
+		context.drawTexture(CFGUI_TEXTURE, relWidth.getAsInt(), relHeight.getAsInt(), 0, 0.0F, 0.0F, BOX_WIDTH, BOX_HEIGHT, BOX_WIDTH, BOX_HEIGHT);
 	}
 
 	private void drawCursor(DrawContext context, Position pos, boolean atEnd) {
@@ -446,15 +451,7 @@ public class ClientFunctionScreen extends Screen {
 		tessellator.draw();
 	}
 
-	private void drawSelection(Rect2i[] selectionRectangles) {
-		Tessellator tessellator = Tessellator.getInstance();
-		BufferBuilder bufferBuilder = tessellator.getBuffer();
-		RenderSystem.setShader(GameRenderer::getPositionProgram);
-		RenderSystem.setShaderColor(0.0F, 0.0F, 255.0F, 255.0F);
-		RenderSystem.enableColorLogicOp();
-		RenderSystem.logicOp(GlStateManager.LogicOp.OR_REVERSE);
-		bufferBuilder.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION);
-
+	private void drawSelection(DrawContext context, Rect2i[] selectionRectangles) {
 		for(Rect2i selectionRectangle : selectionRectangles) {
 			int x = selectionRectangle.getX();
 			int y = selectionRectangle.getY();
@@ -462,14 +459,8 @@ public class ClientFunctionScreen extends Screen {
 				continue;
 			int width = x + selectionRectangle.getWidth();
 			int height = y + selectionRectangle.getHeight();
-			bufferBuilder.vertex(x, height, 0.0).next();
-			bufferBuilder.vertex(width, height, 0.0).next();
-			bufferBuilder.vertex(width, y, 0.0).next();
-			bufferBuilder.vertex(x, y, 0.0).next();
+			context.fill(RenderLayer.getGuiTextHighlight(), x, y, width, height, 0xFF0000FF);
 		}
-
-		tessellator.draw();
-		RenderSystem.disableColorLogicOp();
 	}
 
 	private Position screenPositionToAbsolutePosition(Position position) {
@@ -485,9 +476,9 @@ public class ClientFunctionScreen extends Screen {
 	}
 
 	@Override
-	public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
+	public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
 		if (hasControlDown()) {
-			if (amount > 0)
+			if (verticalAmount > 0)
 				prevButton.onPress();
 			else
 				nextButton.onPress();
@@ -495,12 +486,12 @@ public class ClientFunctionScreen extends Screen {
 			return true;
 		}
 
-		amount = MathHelper.clamp(amount, -1.0, 1.0);
+		verticalAmount = MathHelper.clamp(verticalAmount, -1.0, 1.0);
 		if (!hasShiftDown()) {
-			amount *= 7.0;
+			verticalAmount *= 7.0;
 		}
 
-		scroll(-(int) amount);
+		scroll(-(int) verticalAmount);
 		return true;
 	}
 

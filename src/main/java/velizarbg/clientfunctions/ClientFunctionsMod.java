@@ -43,7 +43,7 @@ public class ClientFunctionsMod implements ModInitializer {
 						player,
 						CommandFunction.create(
 							Identifier.of(
-								player.getEntityName(),
+								player.getEntityName().toLowerCase(),
 								String.valueOf(RANDOM.nextInt())
 							),
 							server.getCommandManager().getDispatcher(),
