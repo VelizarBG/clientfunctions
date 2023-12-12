@@ -15,6 +15,22 @@ public class ModConfig implements ConfigData {
 		return AutoConfig.getConfigHolder(ModConfig.class).getConfig();
 	}
 
+	private static void save() {
+		AutoConfig.getConfigHolder(ModConfig.class).save();
+	}
+
+	@ConfigEntry.Gui.Excluded
+	private int changelogId = 0;
+
+	public int changelogId() {
+		return changelogId;
+	}
+
+	public void setChangelogId(int id) {
+		changelogId = id;
+		save();
+	}
+
 	@ConfigEntry.Gui.EnumHandler(option = ConfigEntry.Gui.EnumHandler.EnumDisplayOption.BUTTON)
 	@Comment("""
 		How should the history of executed functions be saved?

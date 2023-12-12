@@ -2,7 +2,6 @@ package velizarbg.clientfunctions.gui;
 
 import com.google.common.collect.Lists;
 import com.google.common.math.IntMath;
-import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
@@ -111,6 +110,7 @@ public class ClientFunctionScreen extends Screen {
 
 	@Override
 	protected void init() {
+		doChangelogMessage();
 		invalidateBoxContent();
 
 		Consumer<ButtonWidget> unfocusButton = button -> {
@@ -223,6 +223,27 @@ public class ClientFunctionScreen extends Screen {
 				.tooltip(Tooltip.of(Text.translatable("clientfunctions.gui.clearHistory")))
 				.build()
 		);
+	}
+
+	private void doChangelogMessage() {
+		final int changelogId = 1;
+		if (CONFIG.changelogId() < changelogId) {
+			textBoxSelectionManager.insert("""
+				# args={"msg":"Hello, Client Functions!", n:2}
+				#
+				# CHANGELOG
+				#
+				# In this update limited support has been added for macros.
+				# You can't take arguments from blocks, entities
+				# or NBT storages yet, but you can do the following:
+				# Declare an "args={}" statement on the first line of
+				# a client function and specify your keys and values.
+				# Just like we've done here.
+				    
+				$say $(msg) 1+1=$(n)
+				""");
+			CONFIG.setChangelogId(changelogId);
+		}
 	}
 
 	@Override
