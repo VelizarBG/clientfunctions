@@ -4,18 +4,26 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.command.CommandExecutionContext;
+import net.minecraft.command.ReturnValueConsumer;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.StringNbtReader;
+import net.minecraft.server.command.CommandManager;
+import net.minecraft.server.command.FunctionCommand;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.function.CommandFunction;
 import net.minecraft.server.function.CommandFunctionManager;
 import net.minecraft.server.function.MacroException;
+import net.minecraft.server.function.Procedure;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Pair;
+import net.minecraft.util.profiler.Profiler;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -26,6 +34,7 @@ import java.util.regex.Pattern;
 
 public class ClientFunctionsMod implements ModInitializer {
 	public static final Identifier PACKET_CLIENT_FUNCTION_LINES = new Identifier("clientfunctions", "clientfunctionlines");
+	public static final Logger LOGGER = LoggerFactory.getLogger("clientfunctions");
 	private static final ArrayDeque<Pair<ServerPlayerEntity, FunAndArgs>> CLIENT_FUNCTIONS_QUEUE = new ArrayDeque<>();
 	private static final Random RANDOM = new Random();
 	private static final Pattern ARGS_PATTERN = Pattern.compile("#\\s*args=(?<args>\\{.*?\\})");
@@ -48,9 +57,9 @@ public class ClientFunctionsMod implements ModInitializer {
 			}
 			try {
 				// TODO: Handle macro completion from blocks/entities/storage. Could be most convenient to create a custom command to call client functions with while also receiving args, and will bring the opportunity to create a registry of client functions
-				CommandFunction fun = CommandFunction.create(
+				CommandFunction<ServerCommandSource> fun = CommandFunction.create(
 					Identifier.of(
-						player.getEntityName().toLowerCase(),
+						player.getNameForScoreboard().toLowerCase(),
 						String.valueOf(RANDOM.nextInt())
 					),
 					server.getCommandManager().getDispatcher(),
@@ -68,7 +77,7 @@ public class ClientFunctionsMod implements ModInitializer {
 			for (Pair<ServerPlayerEntity, FunAndArgs> pair : CLIENT_FUNCTIONS_QUEUE) {
 				ServerCommandSource source = pair.getLeft().getCommandSource();
 				FunAndArgs funAndArgs = pair.getRight();
-				execute(funAndArgs.fun, funAndArgs.args, source.withSilent().withMaxLevel(2));
+				execute(funAndArgs.fun, funAndArgs.args, FunctionCommand.createFunctionCommandSource(source));
 				CLIENT_FUNCTIONS_QUEUE.removeFirst();
 			}
 		});
@@ -77,12 +86,20 @@ public class ClientFunctionsMod implements ModInitializer {
 	/**
 	 * A clone of {@link CommandFunctionManager#execute(CommandFunction, ServerCommandSource)} but with definable macro args
 	 */
-	private static void execute(CommandFunction function, @Nullable NbtCompound args, ServerCommandSource source) {
+	private static void execute(CommandFunction<ServerCommandSource> function, @Nullable NbtCompound args, ServerCommandSource source) {
+		Profiler profiler = source.getServer().getProfiler();
+		profiler.push(() -> "function " + function.id());
+
 		try {
-			source.getServer().getCommandFunctionManager().execute(function, source, null, args);
+			Procedure<ServerCommandSource> procedure = function.withMacroReplaced(args, source.getServer().getCommandFunctionManager().getDispatcher(), source);
+			CommandManager.callWithContext(source, context -> CommandExecutionContext.enqueueProcedureCall(context, procedure, source, ReturnValueConsumer.EMPTY));
 		} catch (MacroException ignored) {
+		} catch (Exception ex) {
+			LOGGER.warn("Failed to execute function {}", function.id(), ex);
+		} finally {
+			profiler.pop();
 		}
 	}
 
-	private record FunAndArgs(CommandFunction fun, @Nullable NbtCompound args) {}
+	private record FunAndArgs(CommandFunction<ServerCommandSource> fun, @Nullable NbtCompound args) {}
 }
