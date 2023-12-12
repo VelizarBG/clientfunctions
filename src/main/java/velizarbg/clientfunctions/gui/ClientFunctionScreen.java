@@ -562,11 +562,13 @@ public class ClientFunctionScreen extends Screen {
 					scroll(deltaY * deltaMultiplier);
 					return true;
 				}
-				textBoxSelectionManager.moveCursorTo(
-					getBoxContent().getCursorPosition(textRenderer, screenPositionToAbsolutePosition(new Position((int) mouseX, (int) mouseY)), (int) scrolledLines),
-					true
-				);
-				invalidateBoxContent();
+				if (textBoxSelectionManager.isSelecting() || textBoxRect.get().contains((int) mouseX, (int) mouseY)) {
+					textBoxSelectionManager.moveCursorTo(
+						getBoxContent().getCursorPosition(textRenderer, screenPositionToAbsolutePosition(new Position((int) mouseX, (int) mouseY)), (int) scrolledLines),
+						true
+					);
+					invalidateBoxContent();
+				}
 			}
 		}
 		return true;
